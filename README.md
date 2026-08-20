@@ -1,39 +1,41 @@
-## DEVICE TELEMETRY COLLECTION
+# Device Telemetry Collection
 
-## OVERVIEW
+## Overview
 
 - This project is a component for handling telemetry from electricity meters, PV inverters, and batteries.
 - It accepts incoming telemetry, converts it into device-specific models, and applies validation rules.
-- It distinguishes telemetry as VALID, INVALID, MISSING, or STALE.
+- It distinguishes telemetry as `VALID`, `INVALID`, `MISSING`, or `STALE`.
 - Device-specific validation is separated into individual services, while the collector handles routing, parsing, and stale data checks.
 - Valid and stale telemetry can be exposed to downstream consumers.
 
-## ASSUMPTIONS
+## Assumptions
 
-- incoming telemetry is an already-decoded Python dictionary
-- each message contains device_type and telemetry
-- timestamps are ISO-8601 strings
-- timestamps without timezone information are treated as UTC
-- telemetry older than 60 seconds is considered stale
-- stale threshold time could be configurable in a production system
+- Incoming telemetry is an already-decoded Python dictionary.
+- Each message contains `device_type` and `telemetry`.
+- Timestamps are ISO-8601 strings.
+- Timestamps without timezone information are treated as UTC.
+- Telemetry older than 60 seconds is considered stale.
+- The stale threshold could be configurable in a production system.
 
-## ARCHITECTURE
+## Architecture
 
-raw payload
-↓
+```text
+Raw payload
+    ↓
 TelemetryCollector
-↓
-parse / missing checks
-↓
-device model
-↓
-device-specific service
-↓
-stale check
-↓
+    ↓
+Parse / missing checks
+    ↓
+Device model
+    ↓
+Device-specific service
+    ↓
+Stale check
+    ↓
 VALID / INVALID / MISSING / STALE
+```
 
-## VALIDATION RULES
+## Validation Rules
 
 | Device  | Field           | Valid range/status |
 | ------- | --------------- | ------------------ |
@@ -48,121 +50,131 @@ VALID / INVALID / MISSING / STALE
 | Battery | Battery voltage | `0–1`              |
 | Battery | Battery current | `-10000–10000`     |
 
-## INPUT FORMAT
+## Input Format
 
 ### Meter Payload
 
-    ```json
-    {
-    "device_type": "meter",
-    "telemetry": {
-        "import_energy": 100.0,
-        "export_energy": 50.0,
-        "frequency": 50.0,
-        "status": 1,
-        "timestamp": "2026-08-21T01:20:00+10:00"
-    }
-    }
-    ```
+```json
+{
+  "device_type": "meter",
+  "telemetry": {
+    "import_energy": 100.0,
+    "export_energy": 50.0,
+    "frequency": 50.0,
+    "status": 1,
+    "timestamp": "2026-08-21T01:20:00+10:00"
+  }
+}
+```
 
-### PV inverter Payload
+### PV Inverter Payload
 
-````json
- {
- "device_type": "pv_inverter",
- "telemetry": {
-     "active_power": 3.5,
-     "frequency": 50.0,
-     "dc_voltage": 0.7,
-     "dc_current": 10.0,
-     "status": 2,
-     "timestamp": "2026-08-21T01:20:00+10:00"
- }
- }
- ```
+```json
+{
+  "device_type": "pv_inverter",
+  "telemetry": {
+    "active_power": 3.5,
+    "frequency": 50.0,
+    "dc_voltage": 0.7,
+    "dc_current": 10.0,
+    "status": 2,
+    "timestamp": "2026-08-21T01:20:00+10:00"
+  }
+}
+```
 
 ### Battery Payload
 
- ```json
- {
- "device_type": "battery",
- "telemetry": {
-     "state_of_charge": 75.0,
-     "battery_voltage": 0.8,
-     "battery_current": -250.0,
-     "status": 3,
-     "timestamp": "2026-08-21T01:20:00+10:00"
- }
- }
-````
+```json
+{
+  "device_type": "battery",
+  "telemetry": {
+    "state_of_charge": 75.0,
+    "battery_voltage": 0.8,
+    "battery_current": -250.0,
+    "status": 3,
+    "timestamp": "2026-08-21T01:20:00+10:00"
+  }
+}
+```
 
-## TELEMETRY STATES
+## Telemetry States
 
-VALID
+### VALID
 
-- all required fields are present
-- values can be parsed
-- all business validation rules pass
-- timestamp is fresh
+- All required fields are present.
+- Values can be parsed.
+- All business validation rules pass.
+- Timestamp is fresh.
 
-MISSING
+### MISSING
 
-- required field is absent
-- or required field has a None value
+- A required field is absent.
+- A required field has a `None` value.
 
-INVALID
+### INVALID
 
-- malformed value
-- unsupported status
-- value outside allowed range
-- invalid timestamp format
-- malformed telemetry structure
+- Malformed value.
+- Unsupported status.
+- Value outside the allowed range.
+- Invalid timestamp format.
+- Malformed telemetry structure.
 
-STALE
+### STALE
 
-- telemetry is valid
-- timestamp is more than 60 seconds old
+- Telemetry is otherwise valid.
+- Timestamp is more than 60 seconds old.
 
-## DESIGN
+## Design
 
-TelemetryCollector (src/device_telemetry/collector.py)
+### TelemetryCollector
 
-- receives raw payloads
-- identifies device type
-- checks missing/malformed data
-- converts raw values
-- delegates validation
-- checks staleness
+`src/device_telemetry/collector.py`
 
-Meter/PV/Battery models (src/device_telemetry/meter/ , src/device_telemetry/pv/ , src/device_telemetry/Meter/battery/)
+- Receives raw payloads.
+- Identifies the device type.
+- Checks for missing or malformed data.
+- Converts raw values.
+- Delegates device-specific validation.
+- Checks telemetry staleness.
 
-- represent parsed telemetry
+### Meter / PV / Battery Models
 
-Device services
+- `src/device_telemetry/meter/`
+- `src/device_telemetry/pv/`
+- `src/device_telemetry/battery/`
 
-- contain device specific validation rules
+The models represent parsed telemetry for each supported device type.
 
-common/types.py
+### Device Services
 
-- common enums such as device type and telemetry status
+Device services contain the validation rules specific to each device type.
 
-## FILE STRUCTURE
+### Common Types
 
+`src/device_telemetry/common/types.py`
+
+Contains shared enums such as device type and telemetry status.
+
+## File Structure
+
+```text
 src/
 └── device_telemetry/
-├── collector.py
-├── common/
-├── meter/
-├── pv/
-└── battery/
+    ├── collector.py
+    ├── common/
+    ├── meter/
+    ├── pv/
+    └── battery/
+```
 
-## EXPOSING TELEMETRY
+## Exposing Telemetry
 
-- VALID telemetry can be exposed
-- STALE telemetry can also be exposed but is clearly marked stale
-- INVALID/MISSING telemetry is not treated as usable telemetry
+- `VALID` telemetry can be exposed.
+- `STALE` telemetry can also be exposed but is clearly marked as stale.
+- `INVALID` or `MISSING` telemetry is not treated as usable telemetry.
 
-### Sample data
+### Sample Data
 
 ```json
 {
@@ -178,18 +190,20 @@ src/
 }
 ```
 
-## TEST CASES
+## Test Cases
 
 ![Test results](image-1.png)
 
-- boundary conditions
-- invalid ranges
-- statuses
-- missing fields
-- malformed values
-- stale telemetry
+Tests cover:
 
-## RUNNING TESTS
+- Boundary conditions.
+- Invalid ranges.
+- Device statuses.
+- Missing fields.
+- Malformed values.
+- Stale telemetry.
+
+## Running Tests
 
 Install the package in editable mode:
 
@@ -197,9 +211,9 @@ Install the package in editable mode:
 python -m pip install -e .
 ```
 
-## FUTURE IMPROVEMENTS
+## Future Improvements
 
-- stale timeout could be configuration-driven
-- common parsing could be extracted if many more device types are added
-- transport/protocol integration is intentionally not implemented
-- production system could add logging/metrics
+- Stale timeout could be configuration-driven.
+- Common parsing could be extracted if many more device types are added.
+- Transport/protocol integration is intentionally not implemented.
+- A production system could add logging and metrics.
