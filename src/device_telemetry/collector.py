@@ -4,6 +4,8 @@ from device_telemetry.meter.service import MeterTelemetryService
 from device_telemetry.meter.model import MeterConnectionStatus, MeterTelemetry
 from device_telemetry.pv.model import PVConnectionStatus, PVTelemetry
 from device_telemetry.pv.service import PVTelemetryService
+from device_telemetry.battery.model import BatteryConnectionStatus, BatteryTelemetry
+from device_telemetry.battery.service import BatteryTelemetryService
 
 class TelemetryCollector:
 
@@ -73,7 +75,40 @@ class TelemetryCollector:
                 return TelemetryDataStatus.VALID
             else:
                 return TelemetryDataStatus.INVALID
+
+        elif raw_payload.get("device_type") == DeviceType.BATTERY.value:
+            telemetry = raw_payload.get("telemetry", {})
+            required_fields = ["state_of_charge", "battery_voltage","battery_current","status", "timestamp"]
+            try:
+                if (isinstance(telemetry, dict)):
+
+                    if ( all(field in telemetry for field in required_fields)):
+                        if (telemetry["battery_voltage"] is None or telemetry["battery_current"] is None or telemetry["state_of_charge"] is None or telemetry["status"] is None or telemetry["timestamp"] is None):
+                            return TelemetryDataStatus.MISSING
+                        telemetry = {
+                            "battery_voltage": float(telemetry["battery_voltage"]),
+                            "battery_current": float(telemetry["battery_current"]),
+                            "state_of_charge": float(telemetry["state_of_charge"]),
+                            "status": BatteryConnectionStatus(telemetry["status"]),
+                            "timestamp": datetime.fromisoformat(telemetry["timestamp"])
+                        }
+                    else:
+                        return TelemetryDataStatus.MISSING
+
+                else:
+                    return TelemetryDataStatus.INVALID
+            except (ValueError, TypeError):
+                return TelemetryDataStatus.INVALID
             
+            # Assuming a BatteryTelemetryService exists similar to MeterTelemetryService and PVTelemetryService
+            battery_telemetry_service = BatteryTelemetryService(BatteryTelemetry(**telemetry))
+            if battery_telemetry_service.battery_telemetry_data_validation():
+                if self.is_telemetry_stale(telemetry["timestamp"]):
+                    return TelemetryDataStatus.STALE
+                return TelemetryDataStatus.VALID
+            else:
+                return TelemetryDataStatus.INVALID
+
         return TelemetryDataStatus.INVALID
 
     
