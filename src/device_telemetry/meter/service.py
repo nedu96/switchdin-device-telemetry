@@ -30,13 +30,7 @@ class MeterTelemetryService:
         if self._telemetry.status == MeterConnectionStatus.DISCONNECTED:
             return True
         return False
-
-    def validate_timestamp(self):
-        if self._telemetry.timestamp is not None:
-            return True
-        else:
-            return False    
-
+   
     def telemetry_data_validation(self):
         if (
             self.validate_import_energy()

@@ -12,6 +12,10 @@ class TelemetryCollector:
     stale_time : int = 60  # Default stale time in seconds
 
     def validate_telemetry(self, raw_payload: dict) -> TelemetryDataStatus:
+
+        if not isinstance(raw_payload, dict):
+            return TelemetryDataStatus.INVALID
+
         if raw_payload.get("device_type") == DeviceType.METER.value:
             telemetry = raw_payload.get("telemetry", {})
             required_fields = ["import_energy", "export_energy", "frequency", "status", "timestamp"]
@@ -118,7 +122,7 @@ class TelemetryCollector:
         time_difference = current_time - timestamp
         return time_difference.total_seconds() > self.stale_time  # 1 minute in seconds
 
-    def expose_valid_stale_telemetry(self, raw_payload: dict) -> dict:
+    def expose_valid_stale_telemetry(self, raw_payload: dict) -> dict | None:
         telemetry_status = self.validate_telemetry(raw_payload)
         if telemetry_status == TelemetryDataStatus.VALID or telemetry_status == TelemetryDataStatus.STALE:
             return {
@@ -126,3 +130,4 @@ class TelemetryCollector:
                 "telemetry_status": telemetry_status.value,
                 "telemetry": raw_payload.get("telemetry")
             }
+        
