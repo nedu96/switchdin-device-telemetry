@@ -1,4 +1,4 @@
-from device_telemetry.battery.model import BatteryConnectionStatus, BatteryStatus, BatteryTelemetry
+from device_telemetry.battery.model import BatteryConnectionStatus, BatteryTelemetry
 
 class BatteryTelemetryService:
     def __init__(self, battery_telemetry: BatteryTelemetry):
@@ -43,3 +43,5 @@ class BatteryTelemetryService:
             return True
         else:
             return False
+
+        
