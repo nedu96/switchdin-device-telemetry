@@ -1,83 +1,109 @@
 from datetime import datetime
 
-from device_telemetry.meter.model import (
-    MeterConnectionStatus,
-    MeterTelemetry,
+from device_telemetry.pv.model import (
+    PVConnectionStatus,
+    PVTelemetry,
 )
-from device_telemetry.meter.service import MeterTelemetryService
+from device_telemetry.pv.service import PVTelemetryService
 
 
-def create_telemetry(
-    import_energy=100,
-    export_energy=50,
+def create_pv(
+    active_power=2.5,
     frequency=50,
-    status=MeterConnectionStatus.CONNECTED,
-    timestamp=None,
+    dc_voltage=0.5,
+    dc_current=10,
+    status=PVConnectionStatus.GENERATING,
 ):
-    return MeterTelemetry(
-        import_energy=import_energy,
-        export_energy=export_energy,
+    return PVTelemetry(
+        active_power=active_power,
         frequency=frequency,
+        dc_voltage=dc_voltage,
+        dc_current=dc_current,
         status=status,
-        timestamp=timestamp or datetime.now(),
+        timestamp=datetime.now(),
     )
 
 
-def test_valid_import_energy():
-    assert MeterTelemetryService(
-        create_telemetry(import_energy=10)
-    ).validate_import_energy()
+def test_active_power():
+    assert PVTelemetryService(
+        create_pv(active_power=0)
+    ).validate_active_power()
+
+    assert PVTelemetryService(
+        create_pv(active_power=5)
+    ).validate_active_power()
+
+    assert not PVTelemetryService(
+        create_pv(active_power=-0.1)
+    ).validate_active_power()
+
+    assert not PVTelemetryService(
+        create_pv(active_power=5.1)
+    ).validate_active_power()
 
 
-def test_negative_import_energy():
-    assert not MeterTelemetryService(
-        create_telemetry(import_energy=-1)
-    ).validate_import_energy()
-
-
-def test_valid_export_energy():
-    assert MeterTelemetryService(
-        create_telemetry(export_energy=10)
-    ).validate_export_energy()
-
-
-def test_negative_export_energy():
-    assert not MeterTelemetryService(
-        create_telemetry(export_energy=-1)
-    ).validate_export_energy()
-
-
-def test_valid_frequency_boundaries():
-    assert MeterTelemetryService(
-        create_telemetry(frequency=40)
+def test_frequency():
+    assert PVTelemetryService(
+        create_pv(frequency=40)
     ).validate_frequency()
 
-    assert MeterTelemetryService(
-        create_telemetry(frequency=70)
+    assert PVTelemetryService(
+        create_pv(frequency=70)
     ).validate_frequency()
 
-
-def test_invalid_frequency():
-    assert not MeterTelemetryService(
-        create_telemetry(frequency=39.9)
+    assert not PVTelemetryService(
+        create_pv(frequency=39.9)
     ).validate_frequency()
 
-    assert not MeterTelemetryService(
-        create_telemetry(frequency=70.1)
+    assert not PVTelemetryService(
+        create_pv(frequency=70.1)
     ).validate_frequency()
 
 
-def test_connection_status():
-    assert MeterTelemetryService(
-        create_telemetry(status=MeterConnectionStatus.CONNECTED)
-    ).validate_connection_status()
+def test_dc_voltage():
+    assert PVTelemetryService(
+        create_pv(dc_voltage=0)
+    ).validate_dc_voltage()
 
-    assert MeterTelemetryService(
-        create_telemetry(status=MeterConnectionStatus.DISCONNECTED)
-    ).validate_connection_status()
+    assert PVTelemetryService(
+        create_pv(dc_voltage=1)
+    ).validate_dc_voltage()
+
+    assert not PVTelemetryService(
+        create_pv(dc_voltage=-0.1)
+    ).validate_dc_voltage()
+
+    assert not PVTelemetryService(
+        create_pv(dc_voltage=1.1)
+    ).validate_dc_voltage()
 
 
-def test_valid_telemetry():
-    assert MeterTelemetryService(
-        create_telemetry()
-    ).telemetry_data_validation()
+def test_dc_current():
+    assert PVTelemetryService(
+        create_pv(dc_current=0)
+    ).validate_dc_current()
+
+    assert PVTelemetryService(
+        create_pv(dc_current=20)
+    ).validate_dc_current()
+
+    assert not PVTelemetryService(
+        create_pv(dc_current=-0.1)
+    ).validate_dc_current()
+
+    assert not PVTelemetryService(
+        create_pv(dc_current=20.1)
+    ).validate_dc_current()
+
+
+def test_status():
+    for status in PVConnectionStatus:
+        assert PVTelemetryService(
+            create_pv(status=status)
+        ).validate_status()
+
+
+def test_valid_pv_telemetry():
+    service = PVTelemetryService(create_pv())
+
+    assert service.pv_telemetry_data_validation()
