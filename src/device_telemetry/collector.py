@@ -100,7 +100,6 @@ class TelemetryCollector:
             except (ValueError, TypeError):
                 return TelemetryDataStatus.INVALID
             
-            # Assuming a BatteryTelemetryService exists similar to MeterTelemetryService and PVTelemetryService
             battery_telemetry_service = BatteryTelemetryService(BatteryTelemetry(**telemetry))
             if battery_telemetry_service.battery_telemetry_data_validation():
                 if self.is_telemetry_stale(telemetry["timestamp"]):
@@ -118,3 +117,12 @@ class TelemetryCollector:
             timestamp = timestamp.replace(tzinfo=timezone.utc)
         time_difference = current_time - timestamp
         return time_difference.total_seconds() > self.stale_time  # 1 minute in seconds
+
+    def expose_valid_stale_telemetry(self, raw_payload: dict) -> dict:
+        telemetry_status = self.validate_telemetry(raw_payload)
+        if telemetry_status == TelemetryDataStatus.VALID or telemetry_status == TelemetryDataStatus.STALE:
+            return {
+                "device_type": raw_payload.get("device_type"),
+                "telemetry_status": telemetry_status.value,
+                "telemetry": raw_payload.get("telemetry")
+            }
