@@ -209,6 +209,7 @@ Install the package in editable mode:
 
 ```bash
 python -m pip install -e .
+python -m pytest -v
 ```
 
 ## Future Improvements

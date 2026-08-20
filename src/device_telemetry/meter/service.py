@@ -43,7 +43,6 @@ class MeterTelemetryService:
             and self.validate_export_energy()
             and self.validate_frequency()
             and self.validate_connection_status()
-            and self.validate_timestamp()
         ):
             return True
         else:
