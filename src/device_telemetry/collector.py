@@ -12,10 +12,12 @@ class TelemetryCollector:
     stale_time : int = 60  # Default stale time in seconds
 
     def validate_telemetry(self, raw_payload: dict) -> TelemetryDataStatus:
+        # Reject payloads that are not dictionaries.
 
         if not isinstance(raw_payload, dict):
             return TelemetryDataStatus.INVALID
 
+        # Validate meter telemetry.
         if raw_payload.get("device_type") == DeviceType.METER.value:
             telemetry = raw_payload.get("telemetry", {})
             required_fields = ["import_energy", "export_energy", "frequency", "status", "timestamp"]
@@ -48,6 +50,7 @@ class TelemetryCollector:
             else:                       
                 return TelemetryDataStatus.INVALID
 
+        # Validate PV telemetry.
         elif raw_payload.get("device_type") == DeviceType.PV.value:
             telemetry = raw_payload.get("telemetry", {})
             required_fields = ["active_power", "frequency", "dc_voltage", "dc_current", "status", "timestamp"]
@@ -80,6 +83,7 @@ class TelemetryCollector:
             else:
                 return TelemetryDataStatus.INVALID
 
+        # Validate battery telemetry.
         elif raw_payload.get("device_type") == DeviceType.BATTERY.value:
             telemetry = raw_payload.get("telemetry", {})
             required_fields = ["state_of_charge", "battery_voltage","battery_current","status", "timestamp"]
@@ -112,10 +116,12 @@ class TelemetryCollector:
             else:
                 return TelemetryDataStatus.INVALID
 
+        # Unknown device types are invalid.
         return TelemetryDataStatus.INVALID
 
     
     def is_telemetry_stale(self, timestamp: datetime) -> bool:
+        # Compare the telemetry timestamp with the current UTC time.
         current_time = datetime.now(timezone.utc)
         if timestamp.tzinfo is None:
             timestamp = timestamp.replace(tzinfo=timezone.utc)
@@ -123,6 +129,7 @@ class TelemetryCollector:
         return time_difference.total_seconds() > self.stale_time  # 1 minute in seconds
 
     def expose_valid_stale_telemetry(self, raw_payload: dict) -> dict | None:
+        # Return telemetry only when it is valid or stale.
         telemetry_status = self.validate_telemetry(raw_payload)
         if telemetry_status == TelemetryDataStatus.VALID or telemetry_status == TelemetryDataStatus.STALE:
             return {
